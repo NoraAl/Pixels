@@ -1,0 +1,7 @@
+results/*
+build/*
+view/*
+.DS_Store
+.vscode
+*.avi
+!.keep
