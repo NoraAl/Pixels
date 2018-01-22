@@ -1,29 +1,12 @@
-/*
- * Copyright (c) 2017. Nora Alosily <namb2[at]mail[dot]umsl[dot]edu>.
- * Released to public domain under terms of the BSD Simplified license.
- * 
- * Editing the source code of following 
- * Copyright (c) 2011. Philipp Wagner <bytefish[at]gmx[dot]de>.
- * Released to public domain under terms of the BSD Simplified license.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *   * Neither the name of the organization nor the names of its contributors
- *     may be used to endorse or promote products derived from this software
- *     without specific prior written permission.
- *
- *   See <http://www.opensource.org/licenses/bsd-license>
- */
 
 #include "__eigen.hpp"
 
-static Mat norm_0_255(InputArray _src);
-static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') ;
+static void read_csv(const string& filename, vector<Mat>& avg, vector<int>& avglabels,
+                                             vector<Mat>& diff, vector<int>& difflabels,
+                                             char separator = ',') ;
+
+
+
 
 int main(int argc, const char *argv[]) {
     CommandLineParser parser(argc, argv, keys);
@@ -33,6 +16,7 @@ int main(int argc, const char *argv[]) {
         parser.printMessage();
         return 0;
     }
+    int test = 3;
 
     // empty loadFile means trian and save model into default name 
     // existing train means train and save model into the given name 
@@ -48,7 +32,7 @@ int main(int argc, const char *argv[]) {
                 train = false;
         }
     }
-    String outputFolder = parser.get<string>("output");
+    //String outputFolder = parser.get<string>("output");
     int testNo = parser.get<int>("test");
 
     if (!parser.check())
@@ -57,65 +41,51 @@ int main(int argc, const char *argv[]) {
         return 0;
     }
 
-    string csvFile = "../data/images.csv";
+
     string outputFolder = "../results/";
 
-
+    vector<Mat> avgTRimages, diffTRimages, avgTESTimages, diffTESTimages;
+    vector <int > avgTRlabels, diffTRlabels, avgTESTlabels, diffTESTlabels;
     
-    // These vectors hold the images and corresponding labels.
-    vector<Mat> images;
-    vector<int> labels;
+  
     // Read in the data. This can fail if no valid
     // input filename is given.
     try {
-        read_csv(csvFile, images, labels);
+        read_csv( "../data/training.csv", avgTRimages, avgTRlabels, diffTRimages, diffTRlabels);
+        cout << BOLDMAGENTA<<"done..\n"<<RESET;
+        read_csv( "../data/testing.csv", avgTESTimages, avgTESTlabels, diffTESTimages, diffTESTlabels);
+        cout << BOLDGREEN<<"done..\n"<<RESET;
     } catch (cv::Exception& e) {
-        cerr << "Error opening file \"" << csvFile << "\". Reason: " << e.msg << endl;
+        cerr << "Error opening file \"" << "\". Reason: " << e.msg << endl;
         // nothing more we can do
         exit(1);
     }
+    cout <<"here33.."<<endl;
     // Quit if there are not enough images for this demo.
-    if(images.size() <= 1) {
+    if(avgTRimages.size() <= 1) 
+    {
+        cout <<"here11.."<<endl;
         string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
         CV_Error(Error::StsError, error_message);
     }
     // Get the height from the first image. We'll need this
     // later in code to reshape the images to their original
     // size:
-    int height = images[0].rows;
-    // The following lines simply get the last images from
-    // your dataset and remove it from the vector. This is
-    // done, so that the training data (which we learn the
-    // cv::BasicFaceRecognizer on) and the test data we test
-    // the model with, do not overlap.
-    Mat testSample = images[images.size() - 1];
-    int testLabel = labels[labels.size() - 1];
-    images.pop_back();
-    labels.pop_back();
-    // The following lines create an Eigenfaces model for
-    // face recognition and train it with the images and
-    // labels read from the given CSV file.
-    // This here is a full PCA, if you just want to keep
-    // 10 principal components (read Eigenfaces), then call
-    // the factory method like this:
-    //
-    //      EigenFaceRecognizer::create(10);
-    //
-    // If you want to create a FaceRecognizer with a
-    // confidence threshold (e.g. 123.0), call it with:
-    //
-    //      EigenFaceRecognizer::create(10, 123.0);
-    //
-    // If you want to use _all_ Eigenfaces and have a threshold,
-    // then call the method like this:
-    //
-    //      EigenFaceRecognizer::create(0, 123.0);
-    //
-    Ptr<EigenFaceRecognizer> model = EigenFaceRecognizer::create();
-    model->train(images, labels);
+    cout <<"here.."<<endl;
+    int height = avgTRimages[0].rows;
+    
+    cout << "trainging..";
+    Ptr<EigenFaceRecognizer> avgModel = EigenFaceRecognizer::create();
+    Ptr<EigenFaceRecognizer> diffModel = EigenFaceRecognizer::create();
+    cout << "trainging..";
+    avgModel->train(avgTRimages, avgTRlabels);
+     cout << "trainging..";
+    diffModel->train(diffTRimages, diffTRlabels);
+     cout << "trainging..";
     // The following line predicts the label of a given
     // test image:
-    int predictedLabel = model->predict(testSample);
+    int predictedAvg = avgModel->predict(avgTESTimages[test]);
+    int predictedDiff = diffModel->predict(diffTESTimages[test]);
     //
     // To get the confidence of a prediction call the model with:
     //
@@ -123,85 +93,103 @@ int main(int argc, const char *argv[]) {
     //      double confidence = 0.0;
     //      model->predict(testSample, predictedLabel, confidence);
     //
-    string result_message = format("Predicted class = %d / Actual class = %d.", predictedLabel, testLabel);
-    cout << result_message << endl;
+    string result_message = format("Predicted average class = %d / Actual class = %d.", predictedAvg, avgTESTlabels[test]);
+    string result_message2 = format("Predicted average class = %d / Actual class = %d.", predictedDiff, diffTESTlabels[test]);
+    cout << result_message<<endl<<result_message2 << endl;
     // Here is how to get the eigenvalues of this Eigenfaces model:
-    Mat eigenvalues = model->getEigenValues();
+    //Mat eigenvalues = model->getEigenValues();
     // And we can do the same to display the Eigenvectors (read Eigenfaces):
-    Mat W = model->getEigenVectors();
+    Mat avgW = avgModel->getEigenVectors();
+    Mat diffW = diffModel->getEigenVectors();
     // Get the sample mean from the training data
-    Mat mean = model->getMean();
+   //Mat mean = model->getMean();
     // Display or save:
-    if(argc == 2) {
-        imshow("mean", norm_0_255(mean.reshape(1, images[0].rows)));
-    } else {
-        imwrite(format("%s/mean.png", outputFolder.c_str()), norm_0_255(mean.reshape(1, images[0].rows)));
-    }
+
+        imshow("meanAvg", norm_0_255(avgModel->getMean().reshape(1, avgTRimages[0].rows)));
+        imshow("mean Difference", norm_0_255(diffModel->getMean().reshape(1, diffTRimages[0].rows)));
+  
     // Display or save the Eigenfaces:
-    for (int i = 0; i < min(10, W.cols); i++) {
-        string msg = format("Eigenvalue #%d = %.5f", i, eigenvalues.at<double>(i));
-        cout << msg << endl;
+    for (int i = 0; i < min(10, avgW.cols); i++) {
+        // string msg = format("Eigenvalue #%d = %.5f", i, eigenvalues.at<double>(i));
+        // cout << msg << endl;
         // get eigenvector #i
-        Mat ev = W.col(i).clone();
+        Mat ev = avgW.col(i).clone();
         // Reshape to original size & normalize to [0...255] for imshow.
         Mat grayscale = norm_0_255(ev.reshape(1, height));
         // Show the image & apply a Jet colormap for better sensing.
         Mat cgrayscale;
         applyColorMap(grayscale, cgrayscale, COLORMAP_JET);
         // Display or save:
-        if(argc == 2) {
+        if(argc == 2) 
             imshow(format("eigenface_%d", i), cgrayscale);
-        } else {
-            imwrite(format("%s/eigenface_%d.png", outputFolder.c_str(), i), norm_0_255(cgrayscale));
-        }
     }
 
-    // Display or save the image reconstruction at some predefined steps:
-    for(int num_components = min(W.cols, 10); num_components < min(W.cols, 300); num_components+=15) {
-        // slice the eigenvectors from the model
-        Mat evs = Mat(W, Range::all(), Range(0, num_components));
-        Mat projection = LDA::subspaceProject(evs, mean, images[0].reshape(1,1));
-        Mat reconstruction = LDA::subspaceReconstruct(evs, mean, projection);
-        // Normalize the result:
-        reconstruction = norm_0_255(reconstruction.reshape(1, images[0].rows));
+    for (int i = 0; i < min(10, diffW.cols); i++) {
+        // string msg = format("Eigenvalue #%d = %.5f", i, eigenvalues.at<double>(i));
+        // cout << msg << endl;
+        // get eigenvector #i
+        Mat ev = diffW.col(i).clone();
+        // Reshape to original size & normalize to [0...255] for imshow.
+        Mat grayscale = norm_0_255(ev.reshape(1, height));
+        // Show the image & apply a Jet colormap for better sensing.
+        Mat cgrayscale;
+        applyColorMap(grayscale, cgrayscale, COLORMAP_JET);
         // Display or save:
-        if(argc == 2) {
-            imshow(format("eigenface_reconstruction_%d", num_components), reconstruction);
-        } else {
-            imwrite(format("%s/eigenface_reconstruction_%d.png", outputFolder.c_str(), num_components), reconstruction);
-        }
+        if(argc == 2) 
+            imshow(format("eigenface_%d", i), cgrayscale);
     }
-    // Display if we are not writing to an output folder:
-    if(argc == 2) {
+
+    
         waitKey(0);
-    }
+
     return 0;
 }
 
 
 
 /*  read .csv that contains the file names of the dataset   */
-static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ',') {
+static void read_csv(const string& filename, vector<Mat>& avg, vector<int>& avglabels,
+                                             vector<Mat>& diff, vector<int>& difflabels,
+                                             char separator) 
+{
     std::ifstream file(filename.c_str(), ifstream::in);
     if (!file) {
         string error_message = "No valid input file was given, please check the given filename.";
         CV_Error(Error::StsBadArg, error_message);
     }
-    string line, path, classlabel;
-    while (getline(file, line)) {
-        stringstream liness(line);
-        getline(liness, path, separator);
+    string line;
+    while (getline(file, line))
+    {
 
-        if(!path.empty() ) {
-            images.push_back(imread(path, 0));
-            labels.push_back(atoi(classlabel.c_str()));
+        size_t found = line.find("label");
+        if (found == string::npos)
+        {
+            cout << "error!" << '\n';
+            exit(1);
         }
+        string label = line.substr(found + 6, 1);
+        found = line.find("avg");
+        if (found != string::npos)
+        {
+
+            avg.push_back(imread(line, 0));
+            avglabels.push_back(atoi(label.c_str()));
+        }
+        else
+        {
+
+            diff.push_back(imread(line, 0));
+            difflabels.push_back(atoi(label.c_str()));
+        }
+        cout << line << "\t"<< label<< endl;
     }
+
+    file.close();
+ 
 }
 
-
 /*  normalize the images in the dataset */
-static Mat norm_0_255(InputArray _src)
+Mat norm_0_255(InputArray _src)
 {
     Mat src = _src.getMat();
 

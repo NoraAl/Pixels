@@ -1,11 +1,6 @@
 
-#include "_slicAlgorithm.hpp"
+#include "__pixel.hpp"
 
-using namespace cv;
-using namespace cv::slicNora;
-// using namespace std;
-
-//vector <Info> files;
 vector <Meta> metadata;
 static void saveAverage(Meta meta, int range);
 static void readCsv(const string& filename, char separator = ',') ;

@@ -4,4 +4,5 @@ view/*
 .DS_Store
 .vscode
 *.avi
+*.zip
 !.keep

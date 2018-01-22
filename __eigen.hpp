@@ -1,5 +1,5 @@
-#ifndef EIGEN_H
-#define EIGEN_H
+#ifndef EIGENFR
+#define EIGENFR
 
 #include <iostream>
 #include <fstream>

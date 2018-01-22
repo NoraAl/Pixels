@@ -8,7 +8,7 @@ find_package( OpenCV 3.3.0 REQUIRED )
 
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
-add_executable( eigen __eigen.cpp __eigenHelpers.cpp _eigenframes.cpp )
+add_executable( eigen __gen.cpp)
 add_executable( pixels __pixel.cpp)
 
 target_link_libraries( eigen ${OpenCV_LIBS})
